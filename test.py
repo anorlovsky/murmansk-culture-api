@@ -37,4 +37,9 @@ def test_parse_address():
 
 
 if __name__ == "__main__":
-    test_parse_address()
+    # test_parse_address()
+
+    exhibitions = scrap_current_exhibitions(include_address=False)
+
+    for exh in exhibitions:
+        print(exh, "\n")
