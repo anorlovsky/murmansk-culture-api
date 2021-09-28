@@ -39,7 +39,8 @@ def test_parse_address():
 if __name__ == "__main__":
     # test_parse_address()
 
-    exhibitions = scrap_current_exhibitions(include_address=False)
+    exhibitions = scrap_current_exhibitions()
+    exhibitions_json = [exh.json(ensure_ascii=False) for exh in exhibitions]
 
-    for exh in exhibitions:
-        print(exh, "\n")
+    with open("exhibitions.json", "w", encoding="utf-8") as file:
+        json.dump(exhibitions_json, file)

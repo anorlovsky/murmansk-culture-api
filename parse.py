@@ -2,6 +2,10 @@ from enum import Enum, auto
 from dataclasses import dataclass
 from datetime import date, datetime
 
+from pydantic import BaseModel
+
+import json
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -15,32 +19,25 @@ Rough plan for the project:
     - use rss feeds over web scrapping whenever it's possible (run scrapping on startup, then schedule RSS-based updates)
 """
 
-# TODO: write down all the gotchas with parsing the artmmuseum website (corner cases like wrong dates, etc., I sketched some in personal notes)
+
+class Address(str, Enum):
+    MUSEUM = "Мурманский областной художественный музей (ул. Коминтерна, д.13)"
+    PHILHARMONIA = (
+        "Культурно-выставочный центр Русского музея (Мурманская областная филармония"
+        " - ул. Софьи Перовской, д. 3, второй этаж)"
+    )
+    DOMREMESEL = (
+        "Отдел народного искусства и ремёсел (Дом Ремёсел - ул. Книповича, д. 23А)"
+    )
+    UNKNOWN = "неизвестно"
 
 
-class Address(Enum):
-    MUSEUM = auto()
-    PHILHARMONIA = auto()
-    DOMREMESEL = auto()
-    UNKNOWN = auto()
-
-
-@dataclass
-class Exhibition:
+class Exhibition(BaseModel):
     title: str
     url: str
     start_date: date
     end_date: date
-    address: Address
-
-    def __str__(self):
-        return (
-            f"title: {self.title}\nurl: {self.url}\nstart: {self.start_date}\n"
-            f"end: {self.end_date}\naddress: {self.address}"
-        )
-
-
-# def to_json(exhibitions: list[Exhibition]):
+    address: Address = None
 
 
 def parse_address(url: str):
@@ -124,6 +121,13 @@ def scrap_current_exhibitions(include_address=True):
             if end_str is not None:
                 end_date = parse_date(end_str)
 
-            exhibitions.append(Exhibition(title, url, start_date, end_date, address))
+            exh = Exhibition(
+                title=title,
+                url=url,
+                start_date=start_date,
+                end_date=end_date,
+                address=address,
+            )
+            exhibitions.append(exh)
 
     return exhibitions
