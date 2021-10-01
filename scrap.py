@@ -1,7 +1,7 @@
+from datetime import date, datetime
 from typing import Optional
 from enum import Enum, auto
 from dataclasses import dataclass
-from datetime import date, datetime
 import pickle
 
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 Rough plan for the project:
 - initially - a couple API endpoints (FastAPI) to return the current and future exhibitions of Murmansk Art Museum (https://artmmuseum.ru/)
 - eventually (conditional on me staying in Murmansk):
-    - build a Telegram bot on top of that
+    - build a Telegram bot and a simple website on top of that api
     - extend it with other cultural events (like philharmonia concerts, theater plays, etc.)
     - use rss feeds over web scraping whenever it's possible (run scraping on startup, then schedule RSS-based updates)
 """
@@ -108,7 +108,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     return Exhibition(title=title, url=url, start_date=start_date, end_date=end_date)
 
 
-def scrap_exhibitions(time: TimeLabel, include_address=False) -> list[Exhibition]:
+def scrap_exhibitions(time: TimeLabel, include_address=True) -> list[Exhibition]:
     if time == TimeLabel.NOW:
         url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
     elif time == TimeLabel.SOON:
