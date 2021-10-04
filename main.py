@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 import pickle
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from starlette.concurrency import run_in_threadpool
 
 from scrap import TimeLabel, Exhibition, scrap_exhibitions
@@ -81,7 +81,6 @@ def startup():
             print(
                 f"The {exhibitions.filename} file is up-to-date, last update - {last_update}"
             )
-
     else:
         print(f"No {exhibitions.filename} file found, scraping new data.")
         exhibitions.scrap_and_save()
@@ -89,12 +88,12 @@ def startup():
     asyncio.create_task(exhibitions.loop_scraping())
 
 
-# TODO: instead of using two separate endpoints - add a param
-@app.get("/now", response_model=list[Exhibition])
-async def current_exhibitions():
-    return exhibitions.current
-
-
-@app.get("/soon", response_model=list[Exhibition])
-async def upcoming_exhibitions():
-    return exhibitions.upcoming
+# TODO: '/docs' -> '/api/docs'
+@app.get("/api", response_model=list[Exhibition])
+async def serve_exhibitions(time: TimeLabel = None):
+    if time is None:
+        return exhibitions.current + exhibitions.upcoming
+    if time == TimeLabel.NOW:
+        return exhibitions.current
+    if time == TimeLabel.SOON:
+        return exhibitions.upcoming

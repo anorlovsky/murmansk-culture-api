@@ -32,10 +32,9 @@ class Address(str, Enum):
     )
 
 
-class TimeLabel(Enum):
-    NOW = auto()
-    SOON = auto()
-    ARCHIVE = auto()
+class TimeLabel(str, Enum):
+    NOW = "now"
+    SOON = "soon"
 
 
 class Exhibition(BaseModel):
