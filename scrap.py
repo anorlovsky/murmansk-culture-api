@@ -132,8 +132,14 @@ def scrap_exhibitions(
         # entries = entries[:entries_limit]
         exhibitions.extend(parse_entry(x) for x in entries)
 
+    permanent_exhibitions = [
+        "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
+        "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
+    ]
     for exh in exhibitions:
-        if exh.url in scraped_addrs:
+        if exh.url in permanent_exhibitions:
+            exh.address = Address.MUSEUM
+        elif exh.url in scraped_addrs:
             exh.address = scraped_addrs[exh.url]
         else:
             text = fetch_html(exh.url).find("div", {"class": "entry"}).text
