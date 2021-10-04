@@ -1,7 +1,7 @@
 import os
 import time
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 import pickle
 
@@ -15,6 +15,7 @@ Seconds = int
 # TODO: add proper logging
 # TODO: exception handling
 # TODO?: parse rss feed for updates? (still need scraping on startup)
+# ?: do I want to use a db here?
 @dataclass
 class Exhibitions:
     """
@@ -29,8 +30,12 @@ class Exhibitions:
     update_interval: Seconds = 60 * 60 * 8  # 8 hours
 
     def scrap_and_save(self):
-        self.current = scrap_exhibitions(TimeLabel.NOW)
-        self.upcoming = scrap_exhibitions(TimeLabel.SOON)
+        self.current = scrap_exhibitions(
+            TimeLabel.NOW, {exh.url: exh.address for exh in self.current}
+        )
+        self.upcoming = scrap_exhibitions(
+            TimeLabel.SOON, {exh.url: exh.address for exh in self.upcoming}
+        )
         print("Scraped exhibitions")
 
         with open(self.filename, "wb") as file:
@@ -61,6 +66,8 @@ app = FastAPI()
 @app.on_event("startup")
 def startup():
     if os.path.isfile(exhibitions.filename):
+        exhibitions.load()
+
         last_modified = os.path.getmtime(exhibitions.filename)
         dt = time.time() - last_modified
 
@@ -70,7 +77,11 @@ def startup():
             )
             exhibitions.scrap_and_save()
         else:
-            exhibitions.load()
+            last_update = datetime.fromtimestamp(last_modified).replace(microsecond=0)
+            print(
+                f"The {exhibitions.filename} file is up-to-date, last update - {last_update}"
+            )
+
     else:
         print(f"No {exhibitions.filename} file found, scraping new data.")
         exhibitions.scrap_and_save()

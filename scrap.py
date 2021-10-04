@@ -71,7 +71,6 @@ def parse_address(text: str) -> Optional[Address]:
 #  sometimes they stay on the "current exhibitions" page for a while
 def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     """
-
     The datetime attribute of <time> tags is sometimes incorrect (e.g., Unix epoch time),
       so we scrap the user-facing content.
     """
@@ -108,7 +107,9 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     return Exhibition(title=title, url=url, start_date=start_date, end_date=end_date)
 
 
-def scrap_exhibitions(time: TimeLabel, include_address=True) -> list[Exhibition]:
+def scrap_exhibitions(
+    time: TimeLabel, scraped_addrs: dict[str, Address] = {}
+) -> list[Exhibition]:
     if time == TimeLabel.NOW:
         url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
     elif time == TimeLabel.SOON:
@@ -132,8 +133,10 @@ def scrap_exhibitions(time: TimeLabel, include_address=True) -> list[Exhibition]
         # entries = entries[:entries_limit]
         exhibitions.extend(parse_entry(x) for x in entries)
 
-    if include_address:
-        for exh in exhibitions:
+    for exh in exhibitions:
+        if exh.url in scraped_addrs:
+            exh.address = scraped_addrs[exh.url]
+        else:
             text = fetch_html(exh.url).find("div", {"class": "entry"}).text
             exh.address = parse_address(text)
 
