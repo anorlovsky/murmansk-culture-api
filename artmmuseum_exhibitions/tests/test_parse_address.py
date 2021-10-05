@@ -1,6 +1,7 @@
-from scrap import Address, parse_address
+from artmmuseum_exhibitions.scraping import Address, parse_address
 
-
+# TODO?: should I make test cases compact by cutting out "irrelevant" blobs of text?
+# TODO: merge with test_parse_entry.py into single test_parsing.py module
 museum_exhibitions = [
     "28 июля в Мурманском областном художественном музее (Коминтерна, д.13) начнет"
     " работу выставка «По волнам моей памяти», живопись и графика из собрания музея. В"
@@ -143,17 +144,6 @@ def test_parse_address():
         Address.DOMREMESEL: domremesel_exhibitions,
     }
 
-    try:
-        for addr, texts in addrs.items():
-            for text in texts:
-                assert parse_address(text) == addr
-    except AssertionError as err:
-        print(
-            "Error: incorrectly parsed address\n"
-            f"Expected: {addr.name}, got {parse_address(text).name}\n"
-            f"Text: {text}"
-        )
-
-
-if __name__ == "__main__":
-    test_parse_address()
+    for addr, texts in addrs.items():
+        for text in texts:
+            assert parse_address(text) == addr

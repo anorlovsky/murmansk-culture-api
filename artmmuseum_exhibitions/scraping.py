@@ -1,8 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
-from enum import Enum, auto
+from enum import Enum
 from dataclasses import dataclass
-import pickle
 
 from pydantic import BaseModel
 
@@ -76,9 +75,11 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     if "h-exibition" not in entry["class"]:
         return None
 
+    # I can't use <span itemprop="name">, because it cuts off titles which are too long
     title = entry.find("a", {"class": "link"})["title"]
-    # they prepend "Выставка" to every "title", which often leads
-    #  to cases like "Выставка Выставка живописи ..."
+
+    # they prepend "Выставка" to every "title" attr, which often leads
+    #   to cases like "Выставка Выставка живописи ..."
     title = title.removeprefix("Выставка ")
     # TODO?: convert &nbsp; to regular whitespace?
 
