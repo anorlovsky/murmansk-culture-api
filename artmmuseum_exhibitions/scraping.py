@@ -53,7 +53,7 @@ def parse_address(text: str) -> Optional[Address]:
     keywords = {
         Address.MUSEUM: ["коминтерна", "главном здании"],
         Address.PHILHARMONIA: ["перовской", "филарм", "культурно-выставочн"],
-        Address.DOMREMESEL: ["книповича"],
+        Address.DOMREMESEL: ["книповича", "народного искусства и рем"],
     }
 
     text = text.lower()
