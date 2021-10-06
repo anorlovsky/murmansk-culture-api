@@ -87,7 +87,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
 
     if (tag := entry.find("time", {"itemprop": "datePublished"})) is not None:
         # the entry is published without an end date
-        start = tag.text.removesuffix("Скоро!")
+        start = tag.text.removesuffix("Скоро!").removesuffix("Сейчас").strip()
         end = None
     else:
         start = entry.find("time", {"itemprop": "startDate"}).text
