@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 import asyncio
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
@@ -8,11 +9,10 @@ import pickle
 from fastapi import FastAPI, Query
 from starlette.concurrency import run_in_threadpool
 
-from scrap import TimeLabel, Exhibition, scrap_exhibitions
+from scraping import TimeLabel, Exhibition, scrap_exhibitions
 
 Seconds = int
 
-# TODO: add proper logging
 # TODO: exception handling
 # TODO?: parse rss feed for updates? (still need scraping on startup)
 # ?: do I want to use a db here?
@@ -36,18 +36,18 @@ class Exhibitions:
         self.upcoming = scrap_exhibitions(
             TimeLabel.SOON, {exh.url: exh.address for exh in self.upcoming}
         )
-        print("Scraped exhibitions")
+        logging.info("Scraped exhibitions")
 
         with open(self.filename, "wb") as file:
             pickle.dump(exhibitions, file)
-        print(f"Saved exhibitions data to {self.filename}")
+        logging.info(f"Saved exhibitions data to {self.filename}")
 
     def load(self):
         with open(self.filename, "rb") as file:
             data = pickle.load(file)
             self.current = data.current
             self.upcoming = data.upcoming
-        print(f"Loaded exhibitions data from {self.filename}")
+        logging.info(f"Loaded exhibitions data from {self.filename}")
 
     async def loop_scraping(self, wait_first: bool = True):
         """Scrap again to update the data once every {self.update_interval} seconds."""
@@ -60,7 +60,12 @@ class Exhibitions:
 
 exhibitions = Exhibitions()
 
+
+# logging = logging.getlogging(__name__)
+
 app = FastAPI()
+
+# logging.warn("test")
 
 
 @app.on_event("startup")
@@ -72,19 +77,20 @@ def startup():
         dt = time.time() - last_modified
 
         if timedelta(seconds=dt) > timedelta(seconds=exhibitions.update_interval):
-            print(
+            logging.info(
                 f"The {exhibitions.filename} file is not up-to-date, scraping new data."
             )
             exhibitions.scrap_and_save()
         else:
             last_update = datetime.fromtimestamp(last_modified).replace(microsecond=0)
-            print(
+            logging.info(
                 f"The {exhibitions.filename} file is up-to-date, last update - {last_update}"
             )
     else:
-        print(f"No {exhibitions.filename} file found, scraping new data.")
+        logging.info(f"No {exhibitions.filename} file found, scraping new data.")
         exhibitions.scrap_and_save()
 
+    # TODO: first update should be based on the last one
     asyncio.create_task(exhibitions.loop_scraping())
 
 
