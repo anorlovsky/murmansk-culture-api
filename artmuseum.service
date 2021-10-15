@@ -1,0 +1,11 @@
+[Unit]
+Desciption = artmmuseum-exhibitions app
+
+[Service]
+Type=forking
+ExecStart=%h/artmmuseum-exhibitions/artmmuseum_exhibitions/run.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
