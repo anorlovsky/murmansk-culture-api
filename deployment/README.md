@@ -15,19 +15,19 @@ You can use other things, but the scripts/configs in this repo assume you use th
 Also, make sure that ports 80 and 443 are open on firewall (e.g., `ufw allow 'Nginx FULL'`)
 
 # Setting up nginx as a reverse proxy
-`cp deployment/artmuseum-nginx.conf /etc/nginx/conf.d/`
-test your config: `nginx -t`
-`nginx -s reload`
+`cp deployment/artmuseum-nginx.conf /etc/nginx/conf.d/`  
+test your config: `nginx -t`  
+`nginx -s reload`  
 
 # HTTPS support
 Use [certbot](https://certbot.eff.org/lets-encrypt/debianbuster-nginx) to register your TLS certificates.
 Certbot can optionally modify your nginx config to use the certificates.
 
 # Setting up a systemd service 
-`cp deployment/artmuseum.service ~/.config/systemd/user/`
-`systemctl --user start artmuseum`
-`systemctl --user enable artmuseum`
-`loginctl enable-linger <user>`
+`cp deployment/artmuseum.service ~/.config/systemd/user/`  
+`systemctl --user start artmuseum`  
+`systemctl --user enable artmuseum`  
+`loginctl enable-linger <user>`  
 and make sure it works: `systemctl --user status artmuseum`
 
 # Resources
