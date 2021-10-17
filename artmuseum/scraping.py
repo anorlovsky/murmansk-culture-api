@@ -1,13 +1,13 @@
-from datetime import date, datetime
-from typing import Optional
-from enum import Enum
 from dataclasses import dataclass
+from datetime import date
+from datetime import datetime
+from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel
-
-import requests
 import bs4
+import requests
 from bs4 import BeautifulSoup
+from pydantic import BaseModel
 
 
 """ NOTE(anorlovsky)

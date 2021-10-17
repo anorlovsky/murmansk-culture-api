@@ -1,15 +1,20 @@
-import os
-import time
-import logging
 import asyncio
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field
+import logging
+import os
 import pickle
+import time
+from dataclasses import dataclass
+from dataclasses import field
+from datetime import datetime
+from datetime import timedelta
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
+from fastapi import Query
 from starlette.concurrency import run_in_threadpool
 
-from scraping import TimeLabel, Exhibition, scrap_exhibitions
+from scraping import Exhibition
+from scraping import scrap_exhibitions
+from scraping import TimeLabel
 
 Seconds = int
 
