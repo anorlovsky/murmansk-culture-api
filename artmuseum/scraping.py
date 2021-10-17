@@ -1,23 +1,13 @@
-from datetime import date, datetime
-from typing import Optional
-from enum import Enum
 from dataclasses import dataclass
+from datetime import date
+from datetime import datetime
+from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel
-
-import requests
 import bs4
+import requests
 from bs4 import BeautifulSoup
-
-
-""" NOTE(anorlovsky)
-Rough plan for the project:
-- initially - a couple API endpoints (FastAPI) to return the current and future exhibitions of Murmansk Art Museum (https://artmmuseum.ru/)
-- eventually (conditional on me staying in Murmansk):
-    - build a Telegram bot and a simple website on top of that api
-    - extend it with other cultural events (like philharmonia concerts, theater plays, etc.)
-    - use rss feeds over web scraping whenever it's possible (run scraping on startup, then schedule RSS-based updates)
-"""
+from pydantic import BaseModel
 
 
 class Address(str, Enum):
@@ -68,10 +58,6 @@ def parse_address(text: str) -> Optional[Address]:
 # TODO: filter out '<span class="label_archive">' -
 #  sometimes they stay on the "current exhibitions" page for a while
 def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
-    """
-    The datetime attribute of <time> tags is sometimes incorrect (e.g., Unix epoch time),
-      so we scrap the user-facing content.
-    """
     if "h-exibition" not in entry["class"]:
         return None
 
@@ -85,6 +71,8 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
 
     url = entry.find("a", {"class": "link"})["href"]
 
+    # The datetime attribute of <time> tags is sometimes incorrect (e.g., Unix epoch time)
+    #   so we parse the user-facing content.
     if (tag := entry.find("time", {"itemprop": "datePublished"})) is not None:
         # the entry is published without an end date
         start = tag.text.removesuffix("Скоро!").removesuffix("Сейчас").strip()
@@ -133,10 +121,12 @@ def scrap_exhibitions(
         # entries = entries[:entries_limit]
         exhibitions.extend(parse_entry(x) for x in entries)
 
+    # regular exhibitions with known address (which is not mentioned on their pages)
     permanent_exhibitions = [
         "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
         "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
     ]
+
     for exh in exhibitions:
         if exh.url in permanent_exhibitions:
             exh.address = Address.MUSEUM

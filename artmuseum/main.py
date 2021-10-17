@@ -1,21 +1,25 @@
-import os
-import time
-import logging
 import asyncio
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field
+import logging
+import os
 import pickle
+import time
+from dataclasses import dataclass
+from dataclasses import field
+from datetime import datetime
+from datetime import timedelta
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
+from fastapi import Query
+from fastapi.responses import RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from scraping import TimeLabel, Exhibition, scrap_exhibitions
+from scraping import Exhibition
+from scraping import scrap_exhibitions
+from scraping import TimeLabel
 
 Seconds = int
 
 # TODO: exception handling
-# TODO?: parse rss feed for updates? (still need scraping on startup)
-# ?: do I want to use a db here?
 @dataclass
 class Exhibitions:
     """
@@ -49,6 +53,7 @@ class Exhibitions:
             self.upcoming = data.upcoming
         logging.info(f"Loaded exhibitions data from {self.filename}")
 
+    # TODO: parse rss feed for updates? (still need scraping on startup)
     async def loop_scraping(self, wait_first: bool = True):
         """Scrap again to update the data once every {self.update_interval} seconds."""
         if wait_first:
@@ -60,12 +65,7 @@ class Exhibitions:
 
 exhibitions = Exhibitions()
 
-
-# logging = logging.getlogging(__name__)
-
-app = FastAPI()
-
-# logging.warn("test")
+app = FastAPI(redoc_url="/api/docs", docs_url=None)
 
 
 @app.on_event("startup")
@@ -94,7 +94,11 @@ def startup():
     asyncio.create_task(exhibitions.loop_scraping())
 
 
-# TODO: '/docs' -> '/api/docs'
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    return RedirectResponse("https://github.com/anorlovsky/artmuseum")
+
+
 @app.get("/api", response_model=list[Exhibition])
 async def serve_exhibitions(time: TimeLabel = None):
     if time is None:
