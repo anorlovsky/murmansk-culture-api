@@ -1,9 +1,16 @@
 [Unit]
-Desciption = artmmuseum-exhibitions app
+Desciption = uvicorn server running artmuseum exhibitions API
 
+# TODO:
+# (1) I want the run.sh script to be used for both prod and dev with no conditional branching or stuff
+# (2) However, I want it to be forked - script should exit after starting the server process.
+# Doing (2) while satisfying (1) is kinda tricky.
+# For example, if I `uvicorn main:app &` in the run.sh script - it will fork and work fine for prod, 
+#   but calling it directly will ruin stdin and stderr - doesn't work for dev.
+# I think the correct approach is writing ExecStart in such a way that the server process forks, not sure how though 
 [Service]
-Type=forking
-ExecStart=%h/artmmuseum-exhibitions/artmmuseum_exhibitions/run.sh
+Type=simple
+ExecStart=%h/artmuseum/run.sh
 Restart=always
 RestartSec=5
 
