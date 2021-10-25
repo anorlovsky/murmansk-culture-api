@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 
 """
 - https://teatrsf.ru/afisha/2021/10

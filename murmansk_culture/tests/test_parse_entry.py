@@ -1,7 +1,7 @@
 from datetime import date
-from bs4 import BeautifulSoup
 
 from artmuseum.scraping import Exhibition, TimeLabel, parse_entry
+from bs4 import BeautifulSoup
 
 
 def html_template(

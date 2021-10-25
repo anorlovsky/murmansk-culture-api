@@ -3,20 +3,15 @@ import logging
 import os
 import pickle
 import time
-from dataclasses import dataclass
-from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
-from fastapi import FastAPI
-from fastapi import Query
+from fastapi import FastAPI, Query
 from fastapi.responses import RedirectResponse
-from starlette.concurrency import run_in_threadpool
 
 # from scraping import artmuseum
-from scraping.artmuseum import Exhibition
-from scraping.artmuseum import scrap_exhibitions
-from scraping.artmuseum import TimeLabel
+from scraping.artmuseum import Exhibition, TimeLabel, scrap_exhibitions
+from starlette.concurrency import run_in_threadpool
 
 Seconds = int
 
