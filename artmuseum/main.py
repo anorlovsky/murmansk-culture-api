@@ -13,9 +13,10 @@ from fastapi import Query
 from fastapi.responses import RedirectResponse
 from starlette.concurrency import run_in_threadpool
 
-from scraping import Exhibition
-from scraping import scrap_exhibitions
-from scraping import TimeLabel
+# from scraping import artmuseum
+from scraping.artmuseum import Exhibition
+from scraping.artmuseum import scrap_exhibitions
+from scraping.artmuseum import TimeLabel
 
 Seconds = int
 
