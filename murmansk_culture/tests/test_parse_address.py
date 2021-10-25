@@ -1,4 +1,4 @@
-from artmuseum.scraping import Address, parse_address
+from scraping.artmuseum import Address, parse_address
 
 
 def test_address_museum():
