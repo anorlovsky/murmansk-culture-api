@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
+# TODO: move to utils.py
 def fetch_html(url):
     res = requests.get(url)
     return BeautifulSoup(res.text, "html.parser")
