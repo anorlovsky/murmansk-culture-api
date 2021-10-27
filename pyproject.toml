@@ -1,2 +1,3 @@
 [tool.isort]
 profile = "black"
+src_paths = "murmansk_culture/*"
