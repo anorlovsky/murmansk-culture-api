@@ -94,8 +94,9 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     return Exhibition(title=title, url=url, start_date=start_date, end_date=end_date)
 
 
+# TODO: this should scrap both current and upcoming (without the _time_ argument) and return them as two values
 def scrap_exhibitions(
-    time: TimeLabel, scraped_addrs: dict[str, Address] = {}
+    time: TimeLabel, scrap_addrs=True, scraped_addrs: dict[str, Address] = {}
 ) -> list[Exhibition]:
     if time == TimeLabel.NOW:
         url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
@@ -120,19 +121,20 @@ def scrap_exhibitions(
         # entries = entries[:entries_limit]
         exhibitions.extend(parse_entry(x) for x in entries)
 
-    # regular exhibitions with known address (which is not mentioned on their pages)
-    permanent_exhibitions = [
-        "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
-        "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
-    ]
+    if scrap_addrs:
+        # regular exhibitions with known address (which is not mentioned on their pages)
+        permanent_exhibitions = [
+            "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
+            "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
+        ]
 
-    for exh in exhibitions:
-        if exh.url in permanent_exhibitions:
-            exh.address = Address.MUSEUM
-        elif exh.url in scraped_addrs:
-            exh.address = scraped_addrs[exh.url]
-        else:
-            text = fetch_html(exh.url).find("div", {"class": "entry"}).text
-            exh.address = parse_address(text)
+        for exh in exhibitions:
+            if exh.url in permanent_exhibitions:
+                exh.address = Address.MUSEUM
+            elif exh.url in scraped_addrs:
+                exh.address = scraped_addrs[exh.url]
+            else:
+                text = fetch_html(exh.url).find("div", {"class": "entry"}).text
+                exh.address = parse_address(text)
 
     return exhibitions
