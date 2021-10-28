@@ -1,44 +1,53 @@
 from datetime import datetime
+from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
+import bs4
+from pydantic import BaseModel
+
+from scraping.utils import fetch_html
+
+AFISHA_URL = "https://www.murmansound.ru/afisha"
 
 
-# TODO: move to utils.py
-def fetch_html(url):
-    res = requests.get(url)
-    return BeautifulSoup(res.text, "html.parser")
+class PhilharmoniaConcert(BaseModel):
+    title: str
+    url: str
+    description: str
+    date: datetime
+    pushkin_card: bool
+    for_kids: bool
 
 
-def scrap_phil():
-    afisha_url = "https://www.murmansound.ru/afisha"
-    page = fetch_html(afisha_url)
+def parse_entry(entry: bs4.Tag) -> Optional[PhilharmoniaConcert]:
+    if entry.name != "li" or "mix" not in entry["class"]:
+        return None
+    title_tag = entry.find("a", {"class": "mix-title"})
+    title = title_tag.text
+    url = AFISHA_URL + title_tag["href"]
+    description = entry.find("p", {"class": "mix-introtext"}).text
 
-    entries = page.find("ul", {"class": "regridart"})
+    # TODO: should I avoid using this datetime attribute and rely on user-facing
+    #  content instead? (like I did with artmuseum)
+    date = datetime.fromisoformat(entry["data-date"]).replace(second=0)
 
-    # TODO: remove sold-out concerts (or add a flag for that)
-    for entry in entries.find_all("li", {"class": "mix"}):
-        title_tag = entry.find("a", {"class": "mix-title"})
-        title = title_tag.text
-        url = afisha_url + title_tag["href"]
-        description = entry.find("p", {"class": "mix-introtext"}).text
-        # TODO: should I avoid using this datetime attribute and rely on user-facing
-        #  content instead? (like I did with artmuseum)
-        date = datetime.fromisoformat(entry["data-date"]).replace(second=0)
-        for_kids = "tag-ДЕТЯМ" in entry["class"]
-        pushkin_card = "tag-ПУШКИНСКАЯ-КАРТА" in entry["class"]
+    for_kids = "tag-ДЕТЯМ" in entry["class"]
+    pushkin_card = "tag-ПУШКИНСКАЯ-КАРТА" in entry["class"]
 
-        concert = dict(
-            title=title,
-            url=url,
-            description=description,
-            datetime=str(date),
-            pushkin_card=pushkin_card,
-            for_kids=for_kids,
-        )
+    return PhilharmoniaConcert(
+        title=title,
+        url=url,
+        description=description,
+        date=date,
+        pushkin_card=pushkin_card,
+        for_kids=for_kids,
+    )
 
-        print(concert, "\n")
+
+def scrap_philharmonia() -> list[PhilharmoniaConcert]:
+    page = fetch_html(AFISHA_URL)
+    entries = page.find("ul", {"class": "regridart"}).find_all("li", {"class": "mix"})
+    return [parse_entry(x) for x in entries]
 
 
 if __name__ == "__main__":
-    scrap_phil()
+    print(scrap_philharmonia())

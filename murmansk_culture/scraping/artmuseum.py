@@ -8,6 +8,8 @@ import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
+from scraping.utils import fetch_html
+
 
 class Address(str, Enum):
     MUSEUM = "Мурманский областной художественный музей (ул. Коминтерна, д.13)"
@@ -31,11 +33,6 @@ class Exhibition(BaseModel):
     start_date: date
     end_date: date = None
     address: Address = None
-
-
-def fetch_html(url):
-    res = requests.get(url)
-    return BeautifulSoup(res.text, "html.parser")
 
 
 def parse_address(text: str) -> Optional[Address]:
@@ -95,7 +92,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
 
 
 # TODO: this should scrap both current and upcoming (without the _time_ argument) and return them as two values
-def scrap_exhibitions(
+def scrap_artmuseum(
     time: TimeLabel, scrap_addrs=True, scraped_addrs: dict[str, Address] = {}
 ) -> list[Exhibition]:
     if time == TimeLabel.NOW:

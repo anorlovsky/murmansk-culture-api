@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 
 from starlette.concurrency import run_in_threadpool
 
-from scraping.artmuseum import Exhibition, TimeLabel, scrap_exhibitions
+from scraping.artmuseum import Exhibition, TimeLabel, scrap_artmuseum
+from scraping.philharmonia import PhilharmoniaConcert, scrap_philharmonia
 
 Seconds = int
 
@@ -20,6 +21,7 @@ Seconds = int
 class Data:
     current_exhibitions: list[Exhibition] = field(default_factory=list)
     upcoming_exhibitions: list[Exhibition] = field(default_factory=list)
+    concerts: list[PhilharmoniaConcert] = field(default_factory=list)
     filename: str = "data.pickle"
     update_interval: Seconds = 60 * 60 * 8  # 8 hours
 
@@ -50,14 +52,16 @@ class Data:
         return self
 
     def scrap_and_save(self):
-        self.current_exhibitions = scrap_exhibitions(TimeLabel.NOW, scrap_addrs=False)
-        self.upcoming_exhibitions = scrap_exhibitions(TimeLabel.SOON, scrap_addrs=False)
-        # self.current_exhibitions = scrap_exhibitions(
+        # self.current_exhibitions = scrap_artmuseum(
         #     TimeLabel.NOW, {exh.url: exh.address for exh in self.current_exhibitions}
         # )
-        # self.upcoming_exhibitions = scrap_exhibitions(
+        # self.upcoming_exhibitions = scrap_artmuseum(
         #     TimeLabel.SOON, {exh.url: exh.address for exh in self.upcoming_exhibitions}
         # )
+        self.current_exhibitions = scrap_artmuseum(TimeLabel.NOW, scrap_addrs=False)
+        self.upcoming_exhibitions = scrap_artmuseum(TimeLabel.SOON, scrap_addrs=False)
+        self.concerts = scrap_philharmonia()
+
         logging.info("Scraped data")
 
         with open(self.filename, "wb") as file:
@@ -69,6 +73,7 @@ class Data:
             data = pickle.load(file)
             self.current_exhibitions = data.current_exhibitions
             self.upcoming_exhibitions = data.upcoming_exhibitions
+            self.concerts = data.concerts
         logging.info(f"Loaded data from {self.filename}")
 
     async def loop_scraping(self, wait_first: bool = True):

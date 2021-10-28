@@ -1,16 +1,15 @@
 import asyncio
-import logging
 
 import uvicorn
-from fastapi import FastAPI, Query
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI
 
 from model import Data
 from scraping.artmuseum import Exhibition, TimeLabel
+from scraping.philharmonia import PhilharmoniaConcert
 
 # TODO: move under __name__ == '__main__'?
 data = Data()
-app = FastAPI(redoc_url="/api/docs", docs_url=None)
+app = FastAPI(redoc_url="/", docs_url=None)
 
 
 @app.on_event("startup")
@@ -21,12 +20,7 @@ def init_data():
     asyncio.create_task(data.loop_scraping())
 
 
-@app.get("/", include_in_schema=False)
-async def root_redirect():
-    return RedirectResponse("https://github.com/anorlovsky/artmuseum")
-
-
-@app.get("/api", response_model=list[Exhibition])
+@app.get("/artmuseum", response_model=list[Exhibition])
 async def serve_exhibitions(time: TimeLabel = None):
     if time is None:
         return data.current_exhibitions + data.upcoming_exhibitions
@@ -36,18 +30,9 @@ async def serve_exhibitions(time: TimeLabel = None):
         return data.upcoming_exhibitions
 
 
-# @app.get("/api/artmuseum", response_model=list[ArtmuseumExhibition])
-# async def serve_artmuseum(time: TimeLabel = None):
-#     if time is None:
-#         return data.current + data.upcoming
-#     if time == TimeLabel.NOW:
-#         return data.current
-#     if time == TimeLabel.SOON:
-#         return data.upcoming
-
-
-# @app.get("/api/philharmonia", response_model=list[PhilharmoniaConcert])
-# async def serve_philharmsonia():
+@app.get("/philharmonia", response_model=list[PhilharmoniaConcert])
+async def serve_concerts():
+    return data.concerts
 
 
 # TODO: pass kwargs for uvicorn.run through main.py
