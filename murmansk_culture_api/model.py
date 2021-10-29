@@ -52,14 +52,14 @@ class Data:
         return self
 
     def scrap_and_save(self):
-        # self.current_exhibitions = scrap_artmuseum(
-        #     TimeLabel.NOW, {exh.url: exh.address for exh in self.current_exhibitions}
-        # )
-        # self.upcoming_exhibitions = scrap_artmuseum(
-        #     TimeLabel.SOON, {exh.url: exh.address for exh in self.upcoming_exhibitions}
-        # )
-        self.current_exhibitions = scrap_artmuseum(TimeLabel.NOW, scrap_addrs=False)
-        self.upcoming_exhibitions = scrap_artmuseum(TimeLabel.SOON, scrap_addrs=False)
+        self.current_exhibitions = scrap_artmuseum(
+        TimeLabel.NOW, scraped_addrs={exh.url: exh.address for exh in self.current_exhibitions}
+        )
+        self.upcoming_exhibitions = scrap_artmuseum(
+        TimeLabel.SOON, scraped_addrs={exh.url: exh.address for exh in self.upcoming_exhibitions}
+        )
+        # self.current_exhibitions = scrap_artmuseum(TimeLabel.NOW, scrap_addrs=False)
+        # self.upcoming_exhibitions = scrap_artmuseum(TimeLabel.SOON, scrap_addrs=False)
         self.concerts = scrap_philharmonia()
 
         logging.info("Scraped data")
