@@ -21,7 +21,7 @@ $ git clone https://github.com/anorlovsky/murmansk-culture-api.git
 $ cd murmansk-culture-api
 $ python -m venv env
 $ source env/bin/activate
-$ pip install -r requirements
+$ pip install -r requirements.txt
 ```
 
 # Setting up nginx as a reverse proxy
