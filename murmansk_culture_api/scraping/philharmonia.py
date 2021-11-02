@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 import bs4
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from scraping.utils import fetch_html
 
@@ -14,8 +14,11 @@ class PhilharmoniaConcert(BaseModel):
     url: str
     description: str
     date: datetime
-    pushkin_card: bool
-    for_kids: bool
+    pushkin_card: bool = Field(
+        ...,
+        description="Возможность оплатить билет [Пушкинской картой](https://www.culture.ru/pushkinskaya-karta)",
+    )
+    for_kids: bool = Field(..., description="Предназначенные для детей концерты")
 
 
 def parse_entry(entry: bs4.Tag) -> Optional[PhilharmoniaConcert]:

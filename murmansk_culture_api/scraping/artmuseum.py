@@ -11,6 +11,11 @@ from pydantic import BaseModel
 from scraping.utils import fetch_html
 
 
+# TODO: handle these two corner cases
+# https://artmmuseum.ru/vystavka-iz-cikla-prostye-veshhi-3
+# https://artmmuseum.ru/detskaya-galereya-g-apatity-predstavlyaet
+#  end date - not sure what the problem is
+#  address - we need a regex to catch typos, like r'главном з(\w+)нии Мурманского областного художественного музея'?
 class Address(str, Enum):
     MUSEUM = "Мурманский областной художественный музей (ул. Коминтерна, д.13)"
     PHILHARMONIA = (
