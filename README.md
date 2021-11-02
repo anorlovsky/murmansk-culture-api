@@ -10,8 +10,8 @@
 
 | Мероприятие 	| API endpoint 	| Документация 	|
 |:---:	|:---:	|:---:	|
-| выставки  [Мурманского областного художественного музея](https://artmmuseum.ru/) 	| [/artmuseum](https://anorlovsky.me/murmansk-culture/api/artmuseum) 	| [URL](https://anorlovsky.me/murmansk-culture/api/#operation/serve_exhibitions_artmuseum_get) 	|
-| концерты [Мурманской областной филармонии](https://www.murmansound.ru/) 	| [/philharmonia](https://anorlovsky.me/murmansk-culture/api/philharmonia) 	| [URL](https://anorlovsky.me/murmansk-culture/api/philharmonia) 	|
+| выставки  [Мурманского областного художественного музея](https://artmmuseum.ru/) 	| [/artmuseum](https://anorlovsky.me/murmansk-culture/api/artmuseum) 	| [URL](https://anorlovsky.me/murmansk-culture/api/#operation/get_artmuseum_exhibitions_artmuseum_get) 	|
+| концерты [Мурманской областной филармонии](https://www.murmansound.ru/) 	| [/philharmonia](https://anorlovsky.me/murmansk-culture/api/philharmonia) 	| [URL](https://anorlovsky.me/murmansk-culture/api/#operation/get_philharmonia_concerts_philharmonia_get) 	|
 
 ## Дальнейшие планы
 - расширить API информацией о других культурных мероприятиях города  
