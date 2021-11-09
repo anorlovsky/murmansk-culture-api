@@ -1,23 +1,26 @@
-from datetime import datetime
+from datetime import date, datetime
+from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+from pydantic import BaseModel, Field
 
-"""
-- https://teatrsf.ru/afisha/2021/10
-- https://modt.ru/afisha
-- https://arctictheater.com/calendar
-"""
-
-
-def fetch_html(url):
-    res = requests.get(url)
-    return BeautifulSoup(res.text, "html.parser")
+# from scraping.utils import fetch_html
+import utils
+from utils import fetch_html
 
 
 def scrap_teatrsf():
-    afisha_url = "https://teatrsf.ru/afisha/2021/10"
+    # NOTE: they post events for a couple of months ahead, and for now I figured only one way
+    #  to parse all the events - try parsing pages for consecutive months until you get an "emtpy" page.
+    #  Empty pages have the same HTML layout except that the div with event entries is empty.
+    #  Also, note that urls can be anything in the form of r`\/afisha\/(\d)+/(\d)+`
+
+    # TODO: scrap all the events (see the note above)
+    afisha_url = f"https://teatrsf.ru/afisha/2021/{date.today().month}"
     page = fetch_html(afisha_url)
+
+    plays = []
 
     for entry in page.find_all("div", {"class": "afisha-perfomance-box"}):
         title_tag = entry.find("div", {"class": "title"}).a
@@ -29,12 +32,10 @@ def scrap_teatrsf():
         description = ", ".join(a.text.strip() for a in info.find_all("a"))
 
         date_tag = entry.find("div", {"class": "date"})
-
         month, day, time = [
             date_tag.find("div", {"class": div_class})["data-value"]
             for div_class in ("month", "day", "time")
         ]
-
         date_time = datetime.strptime(time, "%H:%M").replace(
             year=datetime.today().year, month=int(month), day=int(day)
         )
@@ -45,8 +46,9 @@ def scrap_teatrsf():
             description=description,
             datetime=str(date_time),
         )
+        plays.append(play)
 
-        print(play, "\n")
+    return plays
 
 
 def scrap_modt():
@@ -66,4 +68,6 @@ def scrap_arctictheater():
 
 
 if __name__ == "__main__":
-    scrap_teatrsf()
+    plays = scrap_teatrsf()
+    for play in plays:
+        print(play)

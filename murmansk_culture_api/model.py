@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 from scraping.artmuseum import Exhibition, TimeLabel, scrap_artmuseum
 from scraping.philharmonia import PhilharmoniaConcert, scrap_philharmonia
 
+
 Seconds = int
 
 # TODO: use sqlalchemy with sqlite backend (once you finish their tutorial)
@@ -53,10 +54,12 @@ class Data:
 
     def scrap_and_save(self):
         self.current_exhibitions = scrap_artmuseum(
-        TimeLabel.NOW, scraped_addrs={exh.url: exh.address for exh in self.current_exhibitions}
+            TimeLabel.NOW,
+            scraped_addrs={exh.url: exh.address for exh in self.current_exhibitions},
         )
         self.upcoming_exhibitions = scrap_artmuseum(
-        TimeLabel.SOON, scraped_addrs={exh.url: exh.address for exh in self.upcoming_exhibitions}
+            TimeLabel.SOON,
+            scraped_addrs={exh.url: exh.address for exh in self.upcoming_exhibitions},
         )
         # self.current_exhibitions = scrap_artmuseum(TimeLabel.NOW, scrap_addrs=False)
         # self.upcoming_exhibitions = scrap_artmuseum(TimeLabel.SOON, scrap_addrs=False)
