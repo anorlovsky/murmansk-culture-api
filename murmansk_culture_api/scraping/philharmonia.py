@@ -3,8 +3,8 @@ from typing import Optional
 
 import bs4
 
-from db.models import PhilharmoniaConcert
-from scraping.utils import fetch_html
+from ..db.models import PhilharmoniaConcert
+from .utils import fetch_html
 
 
 AFISHA_URL = "https://www.murmansound.ru/afisha"

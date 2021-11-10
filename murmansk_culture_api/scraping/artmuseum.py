@@ -1,14 +1,12 @@
-from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 
 import bs4
-import requests
-from bs4 import BeautifulSoup
-from pydantic import BaseModel
 
-from scraping.utils import fetch_html
+from ..datatypes import ArtmuseumAddress, ArtmuseumTimeLabel
+from ..db.models import ArtmuseumExhibition
+from ..scraping.utils import fetch_html
 
 
 # TODO: handle these two corner cases
@@ -16,35 +14,11 @@ from scraping.utils import fetch_html
 # https://artmmuseum.ru/detskaya-galereya-g-apatity-predstavlyaet
 #  end date - not sure what the problem is
 #  address - we need a regex to catch typos, like r'главном з(\w+)нии Мурманского областного художественного музея'?
-class Address(str, Enum):
-    MUSEUM = "Мурманский областной художественный музей (ул. Коминтерна, д.13)"
-    PHILHARMONIA = (
-        "Культурно-выставочный центр Русского музея (Мурманская областная филармония"
-        " - ул. Софьи Перовской, д. 3, второй этаж)"
-    )
-    DOMREMESEL = (
-        "Отдел народного искусства и ремёсел (Дом Ремёсел - ул. Книповича, д. 23А)"
-    )
-
-
-class TimeLabel(str, Enum):
-    NOW = "now"
-    SOON = "soon"
-
-
-class Exhibition(BaseModel):
-    title: str
-    url: str
-    start_date: date
-    end_date: date = None
-    address: Address = None
-
-
-def parse_address(text: str) -> Optional[Address]:
+def parse_address(text: str) -> Optional[ArtmuseumAddress]:
     keywords = {
-        Address.MUSEUM: ["коминтерна", "главном здании"],
-        Address.PHILHARMONIA: ["перовской", "филарм", "культурно-выставочн"],
-        Address.DOMREMESEL: ["книповича", "народного искусства и рем"],
+        ArtmuseumAddress.MUSEUM: ["коминтерна", "главном здании"],
+        ArtmuseumAddress.PHILHARMONIA: ["перовской", "филарм", "культурно-выставочн"],
+        ArtmuseumAddress.DOMREMESEL: ["книповича", "народного искусства и рем"],
     }
 
     text = text.lower()
@@ -58,9 +32,11 @@ def parse_address(text: str) -> Optional[Address]:
 
 # TODO: filter out '<span class="label_archive">' -
 #  sometimes they stay on the "current exhibitions" page for a while
-def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
+def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
     if "h-exibition" not in entry["class"]:
-        return None
+        raise ValueError(
+            'Provided HTML tag does not match expected format - it has no "h-exibition" attribute.'
+        )
 
     # I can't use <span itemprop="name">, because it cuts off titles which are too long
     title = entry.find("a", {"class": "link"})["title"]
@@ -93,19 +69,21 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     # FIXME?: not sure if that's a reasonable pattern or an arcane hack, let's ask
     end_date = end and parse_date(end)
 
-    return Exhibition(title=title, url=url, start_date=start_date, end_date=end_date)
+    return ArtmuseumExhibition(
+        title=title, url=url, start_date=start_date, end_date=end_date
+    )
 
 
 # TODO: this should scrap both current and upcoming (without the _time_ argument) and return them as two values
 def scrap_artmuseum(
-    time: TimeLabel, scrap_addrs=True, scraped_addrs: dict[str, Address] = {}
-) -> list[Exhibition]:
-    if time == TimeLabel.NOW:
+    time: ArtmuseumTimeLabel,
+    scrap_addrs=True,
+    scraped_addrs: dict[str, ArtmuseumAddress] = {},
+) -> list[ArtmuseumExhibition]:
+    if time == ArtmuseumTimeLabel.NOW:
         url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
-    elif time == TimeLabel.SOON:
+    elif time == ArtmuseumTimeLabel.SOON:
         url = "https://artmmuseum.ru/category/vystavki/anons"
-    else:
-        return None
 
     pages = [fetch_html(url)]
 
@@ -117,7 +95,7 @@ def scrap_artmuseum(
         page_urls = [f"{url}/page/{i+1}" for i in range(1, page_count)]
         pages += [fetch_html(url) for url in page_urls]
 
-    exhibitions = []
+    exhibitions: list[ArtmuseumExhibition] = []
     for page in pages:
         entries = page.find_all("h1", {"class": "h-exibition"})
         # entries = entries[:entries_limit]
@@ -132,7 +110,7 @@ def scrap_artmuseum(
 
         for exh in exhibitions:
             if exh.url in permanent_exhibitions:
-                exh.address = Address.MUSEUM
+                exh.address = ArtmuseumAddress.MUSEUM
             elif exh.url in scraped_addrs:
                 exh.address = scraped_addrs[exh.url]
             else:

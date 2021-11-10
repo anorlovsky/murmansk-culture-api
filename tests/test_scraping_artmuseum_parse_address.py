@@ -1,4 +1,5 @@
-from scraping.artmuseum import Address, parse_address
+from murmansk_culture_api.datatypes import ArtmuseumAddress
+from murmansk_culture_api.scraping.artmuseum import parse_address
 
 
 def test_address_museum():
@@ -9,7 +10,7 @@ def test_address_museum():
     ]
 
     for case in cases:
-        assert parse_address(case) == Address.MUSEUM
+        assert parse_address(case) == ArtmuseumAddress.MUSEUM
 
 
 def test_address_phil():
@@ -21,7 +22,7 @@ def test_address_phil():
     ]
 
     for case in cases:
-        assert parse_address(case) == Address.PHILHARMONIA
+        assert parse_address(case) == ArtmuseumAddress.PHILHARMONIA
 
 
 def test_address_domremesel():
@@ -32,4 +33,4 @@ def test_address_domremesel():
     ]
 
     for case in cases:
-        assert parse_address(case) == Address.DOMREMESEL
+        assert parse_address(case) == ArtmuseumAddress.DOMREMESEL

@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Query
 from sqlmodel import Session, create_engine, select
 
-from db.crud import init_db
-from db.models import PhilharmoniaConcert
-from scraping.artmuseum import Exhibition, TimeLabel
+from .datatypes import ArtmuseumAddress, ArtmuseumTimeLabel
+from .db.crud import init_db
+from .db.models import ArtmuseumExhibition, PhilharmoniaConcert
 
 
 sql_engine = create_engine(
@@ -28,23 +28,28 @@ def on_startup():
     init_db(sql_engine)
 
 
-# @app.get(
-#     "/artmuseum",
-#     response_model=list[Exhibition],
-#     description="Возвращает список текущих и ближайших выставок [Мурманского областного художественного музея](https://artmmuseum.ru/)",
-# )
-# async def get_artmuseum_exhibitions(
-#     time: TimeLabel = Query(
-#         None,
-#         description='Вернуть только текущие (`"now"`) или только ближайшие (`"soon"`) выставки',
-#     )
-# ):
-#     if time is None:
-#         return data.current_exhibitions + data.upcoming_exhibitions
-#     if time == TimeLabel.NOW:
-#         return data.current_exhibitions
-#     if time == TimeLabel.SOON:
-#         return data.upcoming_exhibitions
+@app.get(
+    "/artmuseum",
+    response_model=list[ArtmuseumExhibition],
+    description="Возвращает список текущих и ближайших выставок [Мурманского областного художественного музея](https://artmmuseum.ru/)",
+)
+async def get_artmuseum_exhibitions(
+    time: ArtmuseumTimeLabel = Query(
+        None,
+        description='Вернуть только текущие (`"now"`) или только ближайшие (`"soon"`) выставки',
+    )
+):
+    concerts: list[ArtmuseumExhibition]
+    with Session(sql_engine) as session:
+        if time is None:
+            concerts = session.exec(select(ArtmuseumExhibition)).all()
+
+        return concerts
+
+    # if time == ArtmuseumTimeLabel.NOW:
+    #     return data.current_exhibitions
+    # if time == ArtmuseumTimeLabel.SOON:
+    #     return data.upcoming_exhibitions
 
 
 @app.get(
@@ -56,16 +61,3 @@ async def get_philharmonia_concerts():
     with Session(sql_engine) as session:
         concerts = session.exec(select(PhilharmoniaConcert)).all()
         return concerts
-
-
-if __name__ == "__main__":
-    # for development only, see deployment/README.md on running the app in production.
-    import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host="127.0.0.1",
-        port=8000,
-        log_config="log_config.yaml",
-        reload=True,
-    )

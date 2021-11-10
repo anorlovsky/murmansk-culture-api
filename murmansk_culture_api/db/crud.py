@@ -7,8 +7,10 @@ from datetime import datetime
 from sqlmodel import Session, SQLModel
 from starlette.concurrency import run_in_threadpool
 
-from db.models import PhilharmoniaConcert
-from scraping.philharmonia import scrap_philharmonia
+from ..datatypes import ArtmuseumTimeLabel
+from ..scraping.artmuseum import scrap_artmuseum
+from ..scraping.philharmonia import scrap_philharmonia
+from .models import ArtmuseumExhibition, PhilharmoniaConcert
 
 
 def refresh_data(engine):
@@ -27,10 +29,15 @@ def refresh_data(engine):
     #     known_addrs =
 
     concerts = scrap_philharmonia()
+    exhibitions = scrap_artmuseum(ArtmuseumTimeLabel.SOON, scrap_addrs=False)
 
     with Session(engine) as session:
         session.query(PhilharmoniaConcert).delete()
+        session.query(ArtmuseumExhibition).delete()
+
         session.bulk_save_objects(concerts)
+        session.bulk_save_objects(exhibitions)
+
         session.commit()
 
     logging.info("Finished updating database info.")
