@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import FastAPI, Query
 from sqlmodel import Session, create_engine, select
 
@@ -42,14 +44,17 @@ async def get_artmuseum_exhibitions(
     concerts: list[ArtmuseumExhibition]
     with Session(sql_engine) as session:
         if time is None:
-            concerts = session.exec(select(ArtmuseumExhibition)).all()
+            stmt = select(ArtmuseumExhibition)
+        elif time == ArtmuseumTimeLabel.NOW:
+            stmt = select(ArtmuseumExhibition).where(
+                ArtmuseumExhibition.start_date <= date.today()
+            )
+        elif time == ArtmuseumTimeLabel.SOON:
+            stmt = select(ArtmuseumExhibition).where(
+                ArtmuseumExhibition.start_date > date.today()
+            )
 
-        return concerts
-
-    # if time == ArtmuseumTimeLabel.NOW:
-    #     return data.current_exhibitions
-    # if time == ArtmuseumTimeLabel.SOON:
-    #     return data.upcoming_exhibitions
+        return session.exec(stmt).all()
 
 
 @app.get(

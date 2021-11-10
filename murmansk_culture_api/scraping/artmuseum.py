@@ -74,47 +74,46 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
     )
 
 
-# TODO: this should scrap both current and upcoming (without the _time_ argument) and return them as two values
 def scrap_artmuseum(
-    time: ArtmuseumTimeLabel,
-    scrap_addrs=True,
-    scraped_addrs: dict[str, ArtmuseumAddress] = {},
+    known_addrs: dict[str, ArtmuseumAddress] = {},
+    scrap_addrs: bool = True,
 ) -> list[ArtmuseumExhibition]:
-    if time == ArtmuseumTimeLabel.NOW:
-        url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
-    elif time == ArtmuseumTimeLabel.SOON:
-        url = "https://artmmuseum.ru/category/vystavki/anons"
-
-    pages = [fetch_html(url)]
-
-    if pagenavi := pages[0].find("div", {"class": "wp-pagenavi"}):
-        page_count = len(pagenavi) - 1  # one child is a left/right navigation arrow
-        # page_count = min(page_count, pages_limit)
-
-        # starting from `/page/2`, since `/page/1` is `pages[0]`
-        page_urls = [f"{url}/page/{i+1}" for i in range(1, page_count)]
-        pages += [fetch_html(url) for url in page_urls]
-
+    urls = [
+        "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki",
+        "https://artmmuseum.ru/category/vystavki/anons",
+    ]
     exhibitions: list[ArtmuseumExhibition] = []
-    for page in pages:
-        entries = page.find_all("h1", {"class": "h-exibition"})
-        # entries = entries[:entries_limit]
-        exhibitions.extend(parse_entry(x) for x in entries)
 
-    if scrap_addrs:
-        # regular exhibitions with known address (which is not mentioned on their pages)
-        permanent_exhibitions = [
-            "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
-            "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
-        ]
+    for url in urls:
+        pages = [fetch_html(url)]
 
-        for exh in exhibitions:
-            if exh.url in permanent_exhibitions:
-                exh.address = ArtmuseumAddress.MUSEUM
-            elif exh.url in scraped_addrs:
-                exh.address = scraped_addrs[exh.url]
-            else:
-                text = fetch_html(exh.url).find("div", {"class": "entry"}).text
-                exh.address = parse_address(text)
+        if pagenavi := pages[0].find("div", {"class": "wp-pagenavi"}):
+            page_count = len(pagenavi) - 1  # one child is a left/right navigation arrow
+            # page_count = min(page_count, pages_limit)
+
+            # starting from `/page/2`, since `/page/1` is `pages[0]`
+            page_urls = [f"{url}/page/{i+1}" for i in range(1, page_count)]
+            pages += [fetch_html(url) for url in page_urls]
+
+        for page in pages:
+            entries = page.find_all("h1", {"class": "h-exibition"})
+            # entries = entries[:entries_limit]
+            exhibitions.extend(parse_entry(x) for x in entries)
+
+        if scrap_addrs:
+            # regular exhibitions with known address (which is not mentioned on their pages)
+            permanent_exhibitions = [
+                "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
+                "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
+            ]
+
+            for exh in exhibitions:
+                if exh.url in permanent_exhibitions:
+                    exh.address = ArtmuseumAddress.MUSEUM
+                elif exh.url in known_addrs:
+                    exh.address = known_addrs[exh.url]
+                else:
+                    text = fetch_html(exh.url).find("div", {"class": "entry"}).text
+                    exh.address = parse_address(text)
 
     return exhibitions

@@ -4,7 +4,7 @@ import os
 import time
 from datetime import datetime
 
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, select
 from starlette.concurrency import run_in_threadpool
 
 from ..datatypes import ArtmuseumTimeLabel
@@ -23,14 +23,16 @@ def refresh_data(engine):
     brought by trying to maintain a local copy by continuously patching it up with UPDATEs.
       (there can be edits in the source info, urls can change, etc. - it's not worth it to consider all such corner cases)
     """
-    logging.info("Started updating database info.")
-
-    # with Session(engine) as session:
-    #     known_addrs =
-
+    logging.info("Started scraping up-to-date info.")
+    known_addrs = {}
+    with Session(engine) as session:
+        stmt = select(ArtmuseumExhibition.url, ArtmuseumExhibition.address)
+        known_addrs = dict(session.exec(stmt).all())
+    exhibitions = scrap_artmuseum(known_addrs)
     concerts = scrap_philharmonia()
-    exhibitions = scrap_artmuseum(ArtmuseumTimeLabel.SOON, scrap_addrs=False)
+    logging.info("Finished scraping up-to-date info.")
 
+    logging.info("Started updating the database.")
     with Session(engine) as session:
         session.query(PhilharmoniaConcert).delete()
         session.query(ArtmuseumExhibition).delete()
@@ -39,8 +41,7 @@ def refresh_data(engine):
         session.bulk_save_objects(exhibitions)
 
         session.commit()
-
-    logging.info("Finished updating database info.")
+    logging.info("Finished updating the database.")
 
 
 async def loop_refreshing_data(engine, update_interval, initial_sleep_time: int = 0):
