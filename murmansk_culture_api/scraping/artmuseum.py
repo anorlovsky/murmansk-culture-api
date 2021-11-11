@@ -1,8 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import Iterator, Optional
 
 import bs4
+import pydantic
+from pydantic.networks import HttpUrl
 
 from ..datatypes import ArtmuseumAddress, ArtmuseumTimeLabel
 from ..db.models import ArtmuseumExhibition
@@ -44,7 +47,7 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
     # they prepend "Выставка" to every "title" attr, which often leads
     #   to cases like "Выставка Выставка живописи ..."
     title = title.removeprefix("Выставка ")
-    # TODO?: convert &nbsp; to regular whitespace?
+    # TODO: convert &nbsp; to regular whitespace?
 
     url = entry.find("a", {"class": "link"})["href"]
 
@@ -58,7 +61,7 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
         start = entry.find("time", {"itemprop": "startDate"}).text
         end = entry.find("time", {"itemprop": "endDate"}).text
 
-    # TODO?: perhaps this deserves a separate function (which can also handle None properly)
+    # TODO: perhaps this deserves a separate function (which can also handle None properly)
     parse_date = (
         lambda date_str: datetime.strptime(date_str, "%d.%m")
         .replace(year=date.today().year)
@@ -66,7 +69,7 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
     )
 
     start_date = parse_date(start)
-    # FIXME?: not sure if that's a reasonable pattern or an arcane hack, let's ask
+    # FIXME: not sure if that's a reasonable pattern or an arcane hack, let's ask
     end_date = end and parse_date(end)
 
     return ArtmuseumExhibition(
@@ -75,7 +78,7 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
 
 
 def scrap_artmuseum(
-    known_addrs: dict[str, ArtmuseumAddress] = {},
+    known_addrs: dict[HttpUrl, ArtmuseumAddress] = {},
     scrap_addrs: bool = True,
 ) -> list[ArtmuseumExhibition]:
     urls = [
@@ -101,19 +104,31 @@ def scrap_artmuseum(
             exhibitions.extend(parse_entry(x) for x in entries)
 
         if scrap_addrs:
-            # regular exhibitions with known address (which is not mentioned on their pages)
+            # permanent exhibitions with known address (which is not mentioned on their pages)
             permanent_exhibitions = [
                 "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
                 "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
             ]
 
-            for exh in exhibitions:
-                if exh.url in permanent_exhibitions:
-                    exh.address = ArtmuseumAddress.MUSEUM
-                elif exh.url in known_addrs:
-                    exh.address = known_addrs[exh.url]
-                else:
-                    text = fetch_html(exh.url).find("div", {"class": "entry"}).text
+            known_addrs |= {
+                pydantic.parse_obj_as(HttpUrl, url): ArtmuseumAddress.MUSEUM
+                for url in permanent_exhibitions
+            }
+
+            unknown_exhs = filter(lambda exh: exh.url not in known_addrs, exhibitions)
+            if unknown_exhs:
+                unknown_pages: Iterator[bs4.BeautifulSoup]
+                with ThreadPoolExecutor(max_workers=20) as executor:
+                    unknown_pages = executor.map(
+                        fetch_html, [exh.url for exh in unknown_exhs]
+                    )
+
+                for exh, page in zip(exhibitions, unknown_pages):
+                    text = page.find("div", {"class": "entry"}).text
                     exh.address = parse_address(text)
+
+            for exh in exhibitions:
+                # dict.get returns None on non-existent keys.
+                exh.address = known_addrs.get(exh.url)  #
 
     return exhibitions
