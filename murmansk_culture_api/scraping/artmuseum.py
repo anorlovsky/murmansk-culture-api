@@ -1,14 +1,15 @@
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import Iterator, Optional
 
 import bs4
-import requests
-from bs4 import BeautifulSoup
-from pydantic import BaseModel
+import pydantic
+from pydantic.networks import HttpUrl
 
-from scraping.utils import fetch_html
+from ..datatypes import ArtmuseumAddress, ArtmuseumTimeLabel
+from ..db.models import ArtmuseumExhibition
+from ..scraping.utils import fetch_html
 
 
 # TODO: handle these two corner cases
@@ -16,35 +17,11 @@ from scraping.utils import fetch_html
 # https://artmmuseum.ru/detskaya-galereya-g-apatity-predstavlyaet
 #  end date - not sure what the problem is
 #  address - we need a regex to catch typos, like r'главном з(\w+)нии Мурманского областного художественного музея'?
-class Address(str, Enum):
-    MUSEUM = "Мурманский областной художественный музей (ул. Коминтерна, д.13)"
-    PHILHARMONIA = (
-        "Культурно-выставочный центр Русского музея (Мурманская областная филармония"
-        " - ул. Софьи Перовской, д. 3, второй этаж)"
-    )
-    DOMREMESEL = (
-        "Отдел народного искусства и ремёсел (Дом Ремёсел - ул. Книповича, д. 23А)"
-    )
-
-
-class TimeLabel(str, Enum):
-    NOW = "now"
-    SOON = "soon"
-
-
-class Exhibition(BaseModel):
-    title: str
-    url: str
-    start_date: date
-    end_date: date = None
-    address: Address = None
-
-
-def parse_address(text: str) -> Optional[Address]:
+def parse_address(text: str) -> Optional[ArtmuseumAddress]:
     keywords = {
-        Address.MUSEUM: ["коминтерна", "главном здании"],
-        Address.PHILHARMONIA: ["перовской", "филарм", "культурно-выставочн"],
-        Address.DOMREMESEL: ["книповича", "народного искусства и рем"],
+        ArtmuseumAddress.MUSEUM: ["коминтерна", "главном здании"],
+        ArtmuseumAddress.PHILHARMONIA: ["перовской", "филарм", "культурно-выставочн"],
+        ArtmuseumAddress.DOMREMESEL: ["книповича", "народного искусства и рем"],
     }
 
     text = text.lower()
@@ -58,9 +35,11 @@ def parse_address(text: str) -> Optional[Address]:
 
 # TODO: filter out '<span class="label_archive">' -
 #  sometimes they stay on the "current exhibitions" page for a while
-def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
+def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
     if "h-exibition" not in entry["class"]:
-        return None
+        raise ValueError(
+            'Provided HTML tag does not match expected format - it has no "h-exibition" attribute.'
+        )
 
     # I can't use <span itemprop="name">, because it cuts off titles which are too long
     title = entry.find("a", {"class": "link"})["title"]
@@ -68,7 +47,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     # they prepend "Выставка" to every "title" attr, which often leads
     #   to cases like "Выставка Выставка живописи ..."
     title = title.removeprefix("Выставка ")
-    # TODO?: convert &nbsp; to regular whitespace?
+    # TODO: convert &nbsp; to regular whitespace?
 
     url = entry.find("a", {"class": "link"})["href"]
 
@@ -82,7 +61,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
         start = entry.find("time", {"itemprop": "startDate"}).text
         end = entry.find("time", {"itemprop": "endDate"}).text
 
-    # TODO?: perhaps this deserves a separate function (which can also handle None properly)
+    # TODO: perhaps this deserves a separate function (which can also handle None properly)
     parse_date = (
         lambda date_str: datetime.strptime(date_str, "%d.%m")
         .replace(year=date.today().year)
@@ -90,53 +69,66 @@ def parse_entry(entry: bs4.Tag) -> Optional[Exhibition]:
     )
 
     start_date = parse_date(start)
-    # FIXME?: not sure if that's a reasonable pattern or an arcane hack, let's ask
+    # FIXME: not sure if that's a reasonable pattern or an arcane hack, let's ask
     end_date = end and parse_date(end)
 
-    return Exhibition(title=title, url=url, start_date=start_date, end_date=end_date)
+    return ArtmuseumExhibition(
+        title=title, url=url, start_date=start_date, end_date=end_date
+    )
 
 
-# TODO: this should scrap both current and upcoming (without the _time_ argument) and return them as two values
 def scrap_artmuseum(
-    time: TimeLabel, scrap_addrs=True, scraped_addrs: dict[str, Address] = {}
-) -> list[Exhibition]:
-    if time == TimeLabel.NOW:
-        url = "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki"
-    elif time == TimeLabel.SOON:
-        url = "https://artmmuseum.ru/category/vystavki/anons"
-    else:
-        return None
+    known_addrs: dict[HttpUrl, ArtmuseumAddress] = {},
+    scrap_addrs: bool = True,
+) -> list[ArtmuseumExhibition]:
+    urls = [
+        "https://artmmuseum.ru/category/vystavki/tekushhie-vystavki",
+        "https://artmmuseum.ru/category/vystavki/anons",
+    ]
+    exhibitions: list[ArtmuseumExhibition] = []
 
-    pages = [fetch_html(url)]
+    for url in urls:
+        pages = [fetch_html(url)]
 
-    if pagenavi := pages[0].find("div", {"class": "wp-pagenavi"}):
-        page_count = len(pagenavi) - 1  # one child is a left/right navigation arrow
-        # page_count = min(page_count, pages_limit)
+        if pagenavi := pages[0].find("div", {"class": "wp-pagenavi"}):
+            page_count = len(pagenavi) - 1  # one child is a left/right navigation arrow
+            # page_count = min(page_count, pages_limit)
 
-        # starting from `/page/2`, since `/page/1` is `pages[0]`
-        page_urls = [f"{url}/page/{i+1}" for i in range(1, page_count)]
-        pages += [fetch_html(url) for url in page_urls]
+            # starting from `/page/2`, since `/page/1` is `pages[0]`
+            page_urls = [f"{url}/page/{i+1}" for i in range(1, page_count)]
+            pages += [fetch_html(url) for url in page_urls]
 
-    exhibitions = []
-    for page in pages:
-        entries = page.find_all("h1", {"class": "h-exibition"})
-        # entries = entries[:entries_limit]
-        exhibitions.extend(parse_entry(x) for x in entries)
+        for page in pages:
+            entries = page.find_all("h1", {"class": "h-exibition"})
+            # entries = entries[:entries_limit]
+            exhibitions.extend(parse_entry(x) for x in entries)
 
-    if scrap_addrs:
-        # regular exhibitions with known address (which is not mentioned on their pages)
-        permanent_exhibitions = [
-            "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
-            "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
-        ]
+        if scrap_addrs:
+            # permanent exhibitions with known address (which is not mentioned on their pages)
+            permanent_exhibitions = [
+                "https://artmmuseum.ru/vystavka-skulptura-20-21-vekov",
+                "https://artmmuseum.ru/otkrylas-postoyannaya-ehkspoziciya",
+            ]
 
-        for exh in exhibitions:
-            if exh.url in permanent_exhibitions:
-                exh.address = Address.MUSEUM
-            elif exh.url in scraped_addrs:
-                exh.address = scraped_addrs[exh.url]
-            else:
-                text = fetch_html(exh.url).find("div", {"class": "entry"}).text
-                exh.address = parse_address(text)
+            known_addrs |= {
+                pydantic.parse_obj_as(HttpUrl, url): ArtmuseumAddress.MUSEUM
+                for url in permanent_exhibitions
+            }
+
+            unknown_exhs = filter(lambda exh: exh.url not in known_addrs, exhibitions)
+            if unknown_exhs:
+                unknown_pages: Iterator[bs4.BeautifulSoup]
+                with ThreadPoolExecutor(max_workers=20) as executor:
+                    unknown_pages = executor.map(
+                        fetch_html, [exh.url for exh in unknown_exhs]
+                    )
+
+                for exh, page in zip(exhibitions, unknown_pages):
+                    text = page.find("div", {"class": "entry"}).text
+                    exh.address = parse_address(text)
+
+            for exh in exhibitions:
+                # dict.get returns None on non-existent keys.
+                exh.address = known_addrs.get(exh.url)  #
 
     return exhibitions

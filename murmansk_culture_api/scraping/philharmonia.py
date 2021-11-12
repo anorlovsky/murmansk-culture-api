@@ -2,23 +2,12 @@ from datetime import datetime
 from typing import Optional
 
 import bs4
-from pydantic import BaseModel, Field
 
-from scraping.utils import fetch_html
+from ..db.models import PhilharmoniaConcert
+from .utils import fetch_html
+
 
 AFISHA_URL = "https://www.murmansound.ru/afisha"
-
-
-class PhilharmoniaConcert(BaseModel):
-    title: str
-    url: str
-    description: str
-    date: datetime
-    pushkin_card: bool = Field(
-        ...,
-        description="Возможность оплатить билет [Пушкинской картой](https://www.culture.ru/pushkinskaya-karta)",
-    )
-    for_kids: bool = Field(..., description="Предназначенные для детей концерты")
 
 
 def parse_entry(entry: bs4.Tag) -> Optional[PhilharmoniaConcert]:
@@ -46,7 +35,7 @@ def parse_entry(entry: bs4.Tag) -> Optional[PhilharmoniaConcert]:
     )
 
 
-def scrap_philharmonia() -> list[PhilharmoniaConcert]:
+def scrap_philharmonia() -> list[Optional[PhilharmoniaConcert]]:
     page = fetch_html(AFISHA_URL)
     entries = page.find("ul", {"class": "regridart"}).find_all("li", {"class": "mix"})
     return [parse_entry(x) for x in entries]

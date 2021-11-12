@@ -1,3 +1,5 @@
 [tool.isort]
 profile = "black"
-src_paths = "murmansk_culture"
+src_paths = "murmansk_culture_api"
+lines_after_imports = 2
+
