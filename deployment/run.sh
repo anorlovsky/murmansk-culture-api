@@ -1,9 +1,9 @@
 #!/usr/bin/bash
 
-script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-
 PROXY_FLAGS="--proxy-headers --forwarded-allow-ips='*'"
+LOG_CONFIG="--log-config murmansk_culture_api/log_config.yaml"
 ROOT_PATH="--root-path /murmansk-culture/api/"
 
-cd "$script_path"/../murmansk_culture_api
-../env/bin/python -m uvicorn main:app --port 8000 --log-config log_config.yaml $PROXY_FLAGS $ROOT_PATH &
+script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+cd "$script_path"/..
+./env/bin/python -m uvicorn murmansk_culture_api.main:app --port 8000 $PROXY_FLAGS $LOG_CONFIG $ROOT_PATH &
