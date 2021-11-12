@@ -41,7 +41,6 @@ async def get_artmuseum_exhibitions(
         description='Вернуть только текущие (`"now"`) или только ближайшие (`"soon"`) выставки',
     )
 ):
-    concerts: list[ArtmuseumExhibition]
     with Session(sql_engine) as session:
         if time is None:
             stmt = select(ArtmuseumExhibition)
@@ -64,5 +63,4 @@ async def get_artmuseum_exhibitions(
 )
 async def get_philharmonia_concerts():
     with Session(sql_engine) as session:
-        concerts = session.exec(select(PhilharmoniaConcert)).all()
-        return concerts
+        return session.exec(select(PhilharmoniaConcert)).all()
