@@ -35,4 +35,4 @@ $ source env/bin/activate
 $ pip install -r requirements.txt
 ```
 ## Running tests
-Call `pytest` from either root or [src](murmansk_culture_api/) directory
+Testing is done with **pytest**
