@@ -118,7 +118,7 @@ def scrap_artmuseum(
             unknown_exhs = filter(lambda exh: exh.url not in known_addrs, exhibitions)
             if unknown_exhs:
                 unknown_pages: Iterator[bs4.BeautifulSoup]
-                with ThreadPoolExecutor(max_workers=20) as executor:
+                with ThreadPoolExecutor() as executor:
                     unknown_pages = executor.map(
                         fetch_html, [exh.url for exh in unknown_exhs]
                     )
