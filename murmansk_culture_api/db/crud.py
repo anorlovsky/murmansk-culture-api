@@ -26,7 +26,9 @@ def refresh_data(engine):
     logging.info("Started scraping up-to-date info.")
     known_addrs = {}
     with Session(engine) as session:
-        stmt = select(ArtmuseumExhibition.url, ArtmuseumExhibition.address)
+        stmt = select(ArtmuseumExhibition.url, ArtmuseumExhibition.address).where(
+            ArtmuseumExhibition.address != None
+        )
         known_addrs = dict(session.exec(stmt).all())
     exhibitions = scrap_artmuseum(known_addrs)
     concerts = scrap_philharmonia()

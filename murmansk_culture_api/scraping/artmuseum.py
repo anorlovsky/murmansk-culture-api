@@ -78,7 +78,7 @@ def parse_entry(entry: bs4.Tag) -> ArtmuseumExhibition:
 
 
 def scrap_artmuseum(
-    known_addrs: dict[HttpUrl, ArtmuseumAddress] = {},
+    known_addrs: dict[HttpUrl, Optional[ArtmuseumAddress]] = {},
     scrap_addrs: bool = True,
 ) -> list[ArtmuseumExhibition]:
     urls = [
@@ -115,7 +115,9 @@ def scrap_artmuseum(
                 for url in permanent_exhibitions
             }
 
-            unknown_exhs = filter(lambda exh: exh.url not in known_addrs, exhibitions)
+            unknown_exhs = list(
+                filter(lambda exh: exh.url not in known_addrs, exhibitions)
+            )
             if unknown_exhs:
                 unknown_pages: Iterator[bs4.BeautifulSoup]
                 with ThreadPoolExecutor() as executor:
@@ -123,12 +125,12 @@ def scrap_artmuseum(
                         fetch_html, [exh.url for exh in unknown_exhs]
                     )
 
-                for exh, page in zip(exhibitions, unknown_pages):
+                for exh, page in zip(unknown_exhs, unknown_pages):
                     text = page.find("div", {"class": "entry"}).text
-                    exh.address = parse_address(text)
+                    known_addrs |= {exh.url: parse_address(text)}
 
             for exh in exhibitions:
                 # dict.get returns None on non-existent keys.
-                exh.address = known_addrs.get(exh.url)  #
+                exh.address = known_addrs.get(exh.url)
 
     return exhibitions
