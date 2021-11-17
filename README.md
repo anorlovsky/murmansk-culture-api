@@ -1,5 +1,9 @@
 # murmansk-culture-api
 
+[![Test](https://github.com/anorlovsky/murmansk-culture-api/actions/workflows/test.yml/badge.svg)](https://github.com/anorlovsky/murmansk-culture-api/actions/workflows/test.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+
 **API**: http://anorlovsky.me/murmansk-culture/api/
 
 ## О проекте
@@ -18,9 +22,6 @@
 - создать Telegram-бота и вебсайт на основе API
 
 # Development
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-
 This section is about developing in a local dev environment. For production environment see the [deployment guide](deployment/README.md).
 
 ## Requirements
